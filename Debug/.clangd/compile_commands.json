@@ -1,7 +1,7 @@
 [
    {
-      "directory" : "/home/fernanda/workspace_ccstheia/SM-TrabalhoFinal/Debug",
-      "command"   : "clang++ -I\"/home/fernanda/ti/ccs2100/ccs/ccs_base/msp430/include\" -I\"/home/fernanda/workspace_ccstheia/SM-TrabalhoFinal\" -I\"/home/fernanda/ti/ccs2100/ccs/tools/compiler/ti-cgt-msp430_21.6.2.LTS/include\" -D__MSP430G2553__ -xc",
-      "file"      : "/home/fernanda/workspace_ccstheia/SM-TrabalhoFinal/main.c"
+      "directory" : "/home/fernanda/ti/ccs2100/SM-projeto-final/Debug",
+      "command"   : "clang++ -I\"/home/fernanda/ti/ccs2100/ccs/ccs_base/msp430/include\" -I\"/home/fernanda/ti/ccs2100/SM-projeto-final\" -I\"/home/fernanda/ti/ccs2100/ccs/tools/compiler/ti-cgt-msp430_21.6.2.LTS/include\" -D__MSP430G2553__ -xc",
+      "file"      : "/home/fernanda/ti/ccs2100/SM-projeto-final/main.c"
    }
 ]
