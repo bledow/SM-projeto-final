@@ -64,10 +64,28 @@ void ini_uCon(void){
     WDTCTL = WDTPW + WDTHOLD;
 
     //ini
+    if(CALBC1_1MHZ == 0xFF) while(1);
+
+    DCOCTL = 0;
+    BCSCTL1 = CALBC1_1MHZ;
+    DCOCTL = CALDCO_1MHZ;
 }
 
 void ini_P1_P2(void){
     //ini
+    P1DIR |= BIT0 + BIT6;
+    P1OUT &= ~BIT0;
+    P1OUT |= BIT6;
+
+    P1DIR &= ~BIT3;
+    P1REN |= BIT3;
+    P1OUT |= BIT3;
+    P1IES |= BIT3;
+    P1IFG &= ~BIT3;
+    P1IE |= BIT3;
+
+    P2DIR |= BIT1;
+    P2OUT &= ~BIT1;
 }
 
 void ini_Timer0(void){
@@ -79,6 +97,9 @@ void ini_Timer0(void){
 
 void ini_Timer1(void){
     //ini
+    TA1CTL = TASSEL1 + TACLR;
+    TA1CCR0 = 24999;
+    TA1CCTL0 = CCIE;
 }
 
 void ini_ADC(void){
