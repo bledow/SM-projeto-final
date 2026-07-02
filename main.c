@@ -178,8 +178,7 @@ void analisa_apneia(void){
     if(alarme_ativo) return;
 
     if(variancia_janela < 256){
-        janelas_sem_movimento++;
-
+        janelas_sem_movimento++
         if( janelas_sem_movimento >= 2){
             alarme_ativo = 1;
 
