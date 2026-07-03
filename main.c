@@ -54,6 +54,18 @@ int main(void)
 
     __enable_interrupt();
 
+    /*
+     * Janela sem nenhuma variação:
+     * simula 10 segundos sem respiração.
+     */
+    for(k = 0; k < 50; k++)
+    {
+        janela[k] = 500;
+    }
+
+    analisa_apneia();   // primeira janela
+    analisa_apneia();   // segunda janela
+
     while(1);
 }
 
