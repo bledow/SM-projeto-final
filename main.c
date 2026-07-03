@@ -54,17 +54,11 @@ int main(void)
 
     __enable_interrupt();
 
-    /*
-     * Janela sem nenhuma variação:
-     * simula 10 segundos sem respiração.
-     */
-    for(k = 0; k < 50; k++)
-    {
-        janela[k] = 500;
-    }
+    alarme_ativo = 1;
 
-    analisa_apneia();   // primeira janela
-    analisa_apneia();   // segunda janela
+    P1OUT |= BIT0;     // vermelho
+    P1OUT &= ~BIT6;    // verde apagado
+    //P2OUT |= BIT1;     // buzzer ou saída de teste
 
     while(1);
 }
