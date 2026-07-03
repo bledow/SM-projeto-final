@@ -9,7 +9,7 @@
 * SMCLK = 1MHz
 * Rc = 50% (gatilho para o ADC)
 
-* calc a média na main()
+*  cálculo da média na RTI do ADC
 
 * 1 un. de ADC = 3,3V / 1023 = 3,23mV
 * 50mV / 3,23mV = 15,5 => limiar = 16
@@ -25,7 +25,6 @@ void ini_uart(void);
 void analisa_apneia(void);
 
 unsigned int adc_buffer[32];
-unsigned char adc_pronto = 0;
 
 unsigned int janela[50];
 unsigned char indice_janela = 0;
@@ -98,7 +97,7 @@ void ini_Timer0(void){
 void ini_Timer1(void){
     //ini
     TA1CTL = TASSEL1 + TACLR;
-    TA1CCR0 = 24999;
+    TA1CCR0 = 14999;
     TA1CCTL0 = CCIE;
 }
 
@@ -107,7 +106,7 @@ void ini_ADC(void){
     ADC10CTL1 = INCH2 + SHS0 + ADC10SSEL0 + ADC10SSEL1 + CONSEQ1;
     
     ADC10DTC1 = 32;
-    ADC10SA = &adc_buffer[0];
+    ADC10SA = (unsigned int) &adc_buffer[0];
 
     ADC10AE0 = BIT4;
     ADC10CTL0 |= ENC;
@@ -129,21 +128,23 @@ __interrupt void RTI_porta1(void){
 __interrupt void RTI_M0_Timer1_deb(void){
     TA1CTL &= ~MC0;
 
-    P1OUT &= ~BIT0;
-    P1OUT |= BIT6;
-    // P2OUT &= ~BITx; // desligar buzzer
+    if((~P1IN) & BIT3){
+        P1OUT &= ~BIT0;
+        P1OUT |= BIT6;
+        // P2OUT &= ~BITx; // desligar buzzer
 
-    alarme_ativo = 0;
-    janelas_sem_movimento = 0;
-    variancia_janela = 0;
-    media_janela = 0;
-    soma_janela = 0;
+        alarme_ativo = 0;
+        janelas_sem_movimento = 0;
+        variancia_janela = 0;
+        media_janela = 0;
+        soma_janela = 0;
 
-    indice_janela = 0;
-    janela_cheia = 0;
+        indice_janela = 0;
+        janela_cheia = 0;
 
-    for(k = 0; k < 50; k++){
-        janela[k] = 0;
+        for(k = 0; k < 50; k++){
+            janela[k] = 0;
+        }
     }
 
     P1IFG &= ~BIT3;
@@ -156,7 +157,7 @@ __interrupt void RTI_ADC(void){
     
     soma = 0;
 
-    for(k = 0; k < 32; k++) soma = soma + adc_buffer[i];
+    for(k = 0; k < 32; k++) soma = soma + adc_buffer[k];
 
     media = soma >> 5;
 
@@ -174,7 +175,7 @@ __interrupt void RTI_ADC(void){
         janela_cheia = 0;
     }
 
-    ADC10SA = &adc_buffer[0];
+    ADC10SA = (unsigned int) &adc_buffer[0];
     ADC10CTL0 |= ENC;
 }
 
@@ -199,7 +200,7 @@ void analisa_apneia(void){
     if(alarme_ativo) return;
 
     if(variancia_janela < 256){
-        janelas_sem_movimento++
+        janelas_sem_movimento++;
         if( janelas_sem_movimento >= 2){
             alarme_ativo = 1;
 

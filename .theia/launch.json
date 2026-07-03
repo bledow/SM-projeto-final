@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "SM-TrabalhoFinal",
+            "type": "ccs-debug",
+            "request": "launch",
+            "projectInfo": {
+                "name": "SM-TrabalhoFinal",
+                "resourceId": "/SM-TrabalhoFinal"
+            }
+        }
+    ]
+}
