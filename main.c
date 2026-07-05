@@ -2,6 +2,13 @@
 #include <stdio.h>
 
 /*
+--- TESTE 2 ---
+
+Boutão debouncer (S2)
+    - 
+*/
+
+/*
 * P1.4 --> A4 recebe a saída do LM358
 
 * Timer 0 gerando PWM de 5 Hz (200ms)
@@ -19,7 +26,7 @@
 void ini_uCon(void);
 void ini_P1_P2(void);
 //void ini_Timer0(void);
-//void ini_Timer1(void);
+void ini_Timer1(void);
 //void ini_ADC(void);
 //void ini_uart(void);
 
@@ -48,33 +55,19 @@ unsigned char k = 0;
 
 int main(void)
 {
-    log0 = 8;
-
     ini_uCon();
-
-    log0 = 7;
-
     ini_P1_P2();
+    ini_Timer1();
 
-    log0= 6;
+    alarme_ativo = 1;
 
-    /*
-     * Janela sem nenhuma variação:
-     * simula 10 segundos sem respiração.
-     */
-    for(k = 0; k < 50; k++)
-    {
-        janela[k] = 500;
-    }
+    P1OUT |= BIT6;     // vermelho
+    P1OUT &= ~BIT0;    // verde apagado
+    P2OUT |= BIT1;     // buzzer ou saída de teste
 
-    log0 = 5;
-    analisa_apneia();   // primeira janela
-    analisa_apneia();   // segunda janela
+    __enable_interrupt();
 
-    while(1){
-        //if(log0) printf("entrou");
-    }
-
+    while(1);
 }
 
 
@@ -155,8 +148,8 @@ __interrupt void RTI_M0_Timer1_deb(void){
     TA1CTL &= ~MC0;
 
     if((~P1IN) & BIT3){
-        P1OUT &= ~BIT0;
-        P1OUT |= BIT6;
+        P1OUT &= ~BIT6;
+        P1OUT |= BIT0;
         // P2OUT &= ~BITx; // desligar buzzer
 
         alarme_ativo = 0;
