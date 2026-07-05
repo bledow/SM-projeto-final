@@ -1,4 +1,5 @@
 #include <msp430.h>
+#include <stdio.h>
 
 /*
 * P1.4 --> A4 recebe a saída do LM358
@@ -17,10 +18,10 @@
 
 void ini_uCon(void);
 void ini_P1_P2(void);
-void ini_Timer0(void);
-void ini_Timer1(void);
-void ini_ADC(void);
-void ini_uart(void);
+//void ini_Timer0(void);
+//void ini_Timer1(void);
+//void ini_ADC(void);
+//void ini_uart(void);
 
 void analisa_apneia(void);
 
@@ -33,34 +34,47 @@ unsigned char janela_cheia = 0;
 unsigned long soma = 0;
 unsigned int media = 0;
 
-unsigned char janelas_sem_movimento = 0;
-unsigned char alarme_ativo = 0;
+volatile unsigned char janelas_sem_movimento = 0;
+volatile unsigned char alarme_ativo = 0;
 
 unsigned long soma_janela = 0;
 unsigned int media_janela = 0;
 unsigned long variancia_janela = 0;
 long diferenca = 0;
 
+volatile unsigned char log0 = 0;
+
 unsigned char k = 0;
 
 int main(void)
 {
+    log0 = 8;
+
     ini_uCon();
+
+    log0 = 7;
+
     ini_P1_P2();
-    ini_Timer0();
-    ini_Timer1();
-    ini_ADC();
-    ini_uart();
 
-    __enable_interrupt();
+    log0= 6;
 
-    alarme_ativo = 1;
+    /*
+     * Janela sem nenhuma variação:
+     * simula 10 segundos sem respiração.
+     */
+    for(k = 0; k < 50; k++)
+    {
+        janela[k] = 500;
+    }
 
-    P1OUT |= BIT0;     // vermelho
-    P1OUT &= ~BIT6;    // verde apagado
-    //P2OUT |= BIT1;     // buzzer ou saída de teste
+    log0 = 5;
+    analisa_apneia();   // primeira janela
+    analisa_apneia();   // segunda janela
 
-    while(1);
+    while(1){
+        //if(log0) printf("entrou");
+    }
+
 }
 
 
@@ -69,28 +83,34 @@ void ini_uCon(void){
     WDTCTL = WDTPW + WDTHOLD;
 
     //ini
-    if(CALBC1_1MHZ == 0xFF) while(1);
+    //if(CALBC1_1MHZ == 0xFF) while(1);
 
     DCOCTL = 0;
     BCSCTL1 = CALBC1_1MHZ;
     DCOCTL = CALDCO_1MHZ;
+
+    //while(BCSCTL3 & LFXT1OF);
+
+    __enable_interrupt();
 }
 
 void ini_P1_P2(void){
-    //ini
-    P1DIR |= BIT0 + BIT6;
-    P1OUT &= ~BIT0;
-    P1OUT |= BIT6;
+    // Garante função GPIO para os LEDs
+    P1SEL &= ~(BIT0 + BIT6);
+    P1SEL2 &= ~(BIT0 + BIT6);
 
-    P1DIR &= ~BIT3;
+    P1DIR = BIT0 + BIT6;
+    P1OUT = BIT3 + BIT0;
+
     P1REN |= BIT3;
-    P1OUT |= BIT3;
+
     P1IES |= BIT3;
     P1IFG &= ~BIT3;
     P1IE |= BIT3;
 
     P2DIR |= BIT1;
     P2OUT &= ~BIT1;
+    //printf("portas ini");
 }
 
 void ini_Timer0(void){
@@ -203,15 +223,22 @@ void analisa_apneia(void){
 
     variancia_janela = variancia_janela / 50;
 
+    log0 = 4;
+
     if(alarme_ativo) return;
+
+    log0 = 3;
 
     if(variancia_janela < 256){
         janelas_sem_movimento++;
-        if( janelas_sem_movimento >= 2){
+        log0 = 2;
+        if(janelas_sem_movimento >= 2){
             alarme_ativo = 1;
+            //printf("entrou");
+            log0 = 1;
 
-            P1OUT |= BIT0;
-            P1OUT &= ~BIT6;
+            P1OUT |= BIT6;
+            P1OUT &= ~BIT0;
             // P2OUT |= BITx; // ligar buzzer
         }
     } else {
