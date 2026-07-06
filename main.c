@@ -2,13 +2,6 @@
 #include <stdio.h>
 
 /*
---- TESTE 4 ---
-
-Uma janela de 10 segundos
-    - 
-*/
-
-/*
 * P1.4 --> A4 recebe a saída do LM358
 
 * Timer 0 gerando PWM de 5 Hz (200ms)
@@ -213,20 +206,6 @@ void analisa_apneia(void){
     }
 
     variancia_janela = variancia_janela / 50;
-
-    /*
-    * TESTE 4:
-    * para o Timer0 depois de analisar uma janela
-    * e mantém os valores congelados no debugger.
-    */
-    TA0CTL &= ~MC0;
-
-    teste4_pronto = 1;
-
-    /* Os dois LEDs acesos indicam que a janela terminou */
-    P1OUT |= BIT0 + BIT6;
-
-    return;
 
     if(alarme_ativo) return;
 
