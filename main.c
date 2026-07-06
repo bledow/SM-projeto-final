@@ -2,9 +2,9 @@
 #include <stdio.h>
 
 /*
---- TESTE 3 ---
+--- TESTE 4 ---
 
-funcionamento do ADC
+Uma janela de 10 segundos
     - 
 */
 
@@ -50,6 +50,7 @@ volatile unsigned long variancia_janela = 0;
 volatile unsigned long diferenca = 0;
 
 volatile unsigned char log0 = 0;
+volatile unsigned char teste4_pronto = 0;
 
 int main(void)
 {
@@ -212,6 +213,20 @@ void analisa_apneia(void){
     }
 
     variancia_janela = variancia_janela / 50;
+
+    /*
+    * TESTE 4:
+    * para o Timer0 depois de analisar uma janela
+    * e mantém os valores congelados no debugger.
+    */
+    TA0CTL &= ~MC0;
+
+    teste4_pronto = 1;
+
+    /* Os dois LEDs acesos indicam que a janela terminou */
+    P1OUT |= BIT0 + BIT6;
+
+    return;
 
     if(alarme_ativo) return;
 
