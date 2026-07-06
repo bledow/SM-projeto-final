@@ -21,7 +21,8 @@ void ini_P1_P2(void);
 void ini_Timer0(void);
 void ini_Timer1(void);
 void ini_ADC(void);
-//void ini_uart(void);
+void ini_uart(void);
+void enviar_tensao_uart(void);
 
 void analisa_apneia(void);
 
@@ -45,6 +46,10 @@ volatile unsigned long diferenca = 0;
 volatile unsigned char log0 = 0;
 volatile unsigned char teste4_pronto = 0;
 
+volatile float tensao = 0.0;
+unsigned char TX_DATA[32];
+unsigned char tx_index = 0;
+
 int main(void)
 {
     ini_uCon();
@@ -52,6 +57,7 @@ int main(void)
     ini_Timer0();
     ini_Timer1();
     ini_ADC();
+    ini_uart();
 
     while(1);
 }
@@ -117,7 +123,24 @@ void ini_ADC(void){
 }
 
 void ini_uart(void){
-    //ini
+
+    UCA0CTL1 |= UCSWRST;
+
+    UCA0CTL0 = 0;
+    UCA0CTL1 = UCSSEL1 + UCSWRST;
+
+    UCA0BR0 = 104;
+    UCA0BR1 = 0;
+    UCA0MCTL = UCBRS0;
+
+
+    P1SEL  |= BIT2;
+    P1SEL2 |= BIT2;
+
+    UCA0CTL1 &= ~UCSWRST;
+
+    IFG2 &= ~UCA0TXIFG;
+    IE2  |= UCA0TXIE;
 }
 
 /* RTI */
@@ -184,8 +207,25 @@ __interrupt void RTI_ADC(void){
         janela_cheia = 0;
     }
 
+    enviar_tensao_uart();
     ADC10SA = (unsigned int) &adc_buffer[0];
     ADC10CTL0 |= ENC;
+}
+
+#pragma vector=USCIAB0TX_VECTOR
+__interrupt void USCI0TX_RTI(void){
+    IFG2 &= ~UCA0TXIFG;
+
+    if( TX_DATA[tx_index] == '\0' ){
+        tx_index = 0;
+    }else{
+        if(tx_index >= 32){
+            tx_index = 0;
+        }else{
+            UCA0TXBUF = TX_DATA[tx_index];
+            tx_index++;
+        }
+    }
 }
 
 /*func apoio*/
@@ -221,5 +261,27 @@ void analisa_apneia(void){
         }
     } else {
         janelas_sem_movimento = 0;
+    }
+}
+
+void enviar_tensao_uart(void){
+
+    float aux;
+    char vin_int;
+    char vin_dec_1;
+    char vin_dec_2;
+
+    tensao = (3.3 * (float)media) / 1023.0;
+
+    vin_int = (char)tensao;
+    aux = (tensao - (float)vin_int) * 10.0;
+    vin_dec_1 = (char)aux;
+    aux = (aux - (float)vin_dec_1) * 10.0;
+    vin_dec_2 = (char)aux;
+
+    if(tx_index == 0)
+    {
+        sprintf((char*)TX_DATA,"Tensao = %d,%d%d V\r\n", vin_int, vin_dec_1, vin_dec_2);
+        IFG2 |= UCA0TXIFG;
     }
 }
