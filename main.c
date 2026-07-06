@@ -2,9 +2,9 @@
 #include <stdio.h>
 
 /*
---- TESTE 2 ---
+--- TESTE 3 ---
 
-Boutão debouncer (S2)
+funcionamento do ADC
     - 
 */
 
@@ -25,85 +25,76 @@ Boutão debouncer (S2)
 
 void ini_uCon(void);
 void ini_P1_P2(void);
-//void ini_Timer0(void);
+void ini_Timer0(void);
 void ini_Timer1(void);
-//void ini_ADC(void);
+void ini_ADC(void);
 //void ini_uart(void);
 
 void analisa_apneia(void);
 
-unsigned int adc_buffer[32];
+volatile unsigned int adc_buffer[32];
 
-unsigned int janela[50];
-unsigned char indice_janela = 0;
-unsigned char janela_cheia = 0;
+volatile unsigned int janela[50];
+volatile unsigned char indice_janela = 0;
+volatile unsigned char janela_cheia = 0;
 
-unsigned long soma = 0;
-unsigned int media = 0;
+volatile unsigned long soma = 0;
+volatile unsigned int media = 0;
 
 volatile unsigned char janelas_sem_movimento = 0;
 volatile unsigned char alarme_ativo = 0;
 
-unsigned long soma_janela = 0;
-unsigned int media_janela = 0;
-unsigned long variancia_janela = 0;
-long diferenca = 0;
+volatile unsigned long soma_janela = 0;
+volatile unsigned int media_janela = 0;
+volatile unsigned long variancia_janela = 0;
+volatile unsigned long diferenca = 0;
 
 volatile unsigned char log0 = 0;
-
-unsigned char k = 0;
 
 int main(void)
 {
     ini_uCon();
     ini_P1_P2();
+    ini_Timer0();
     ini_Timer1();
-
-    alarme_ativo = 1;
-
-    P1OUT |= BIT6;     // vermelho
-    P1OUT &= ~BIT0;    // verde apagado
-    P2OUT |= BIT1;     // buzzer ou saída de teste
-
-    __enable_interrupt();
+    ini_ADC();
 
     while(1);
 }
 
+void ini_uCon(void)
+{
+    WDTCTL = WDTPW | WDTHOLD;
 
+    DCOCTL = CALDCO_8MHZ;
+    BCSCTL1 = CALBC1_8MHZ;
+    BCSCTL2 = DIVS0 + DIVS1;   // SMCLK = 8 MHz / 8 = 1 MHz
+    BCSCTL3 = XCAP0 + XCAP1;
 
-void ini_uCon(void){
-    WDTCTL = WDTPW + WDTHOLD;
-
-    //ini
-    //if(CALBC1_1MHZ == 0xFF) while(1);
-
-    DCOCTL = 0;
-    BCSCTL1 = CALBC1_1MHZ;
-    DCOCTL = CALDCO_1MHZ;
-
-    //while(BCSCTL3 & LFXT1OF);
+    while(BCSCTL3 & LFXT1OF);
 
     __enable_interrupt();
 }
 
-void ini_P1_P2(void){
-    // Garante função GPIO para os LEDs
-    P1SEL &= ~(BIT0 + BIT6);
-    P1SEL2 &= ~(BIT0 + BIT6);
+void ini_P1_P2(void)
+{
+    /*
+     * P1.0 --> LED verde
+     * P1.6 --> LED vermelho
+     * P1.3 --> S2
+     * P1.4 --> A4
+     */
 
     P1DIR = BIT0 + BIT6;
+    P1REN = BIT3;
     P1OUT = BIT3 + BIT0;
 
-    P1REN |= BIT3;
+    P1IES = BIT3;
+    P1IFG = 0;
+    P1IE = BIT3;
 
-    P1IES |= BIT3;
-    P1IFG &= ~BIT3;
-    P1IE |= BIT3;
-
-    P2DIR |= BIT1;
-    P2OUT &= ~BIT1;
-    //printf("portas ini");
+    P2DIR = BIT1;
+    P2OUT = 0;
 }
 
 void ini_Timer0(void){
@@ -147,10 +138,14 @@ __interrupt void RTI_porta1(void){
 __interrupt void RTI_M0_Timer1_deb(void){
     TA1CTL &= ~MC0;
 
+    unsigned char k = 0;
+
     if((~P1IN) & BIT3){
         P1OUT &= ~BIT6;
         P1OUT |= BIT0;
         // P2OUT &= ~BITx; // desligar buzzer
+
+        TA1CTL |= TACLR;
 
         alarme_ativo = 0;
         janelas_sem_movimento = 0;
@@ -173,7 +168,8 @@ __interrupt void RTI_M0_Timer1_deb(void){
 #pragma vector=ADC10_VECTOR
 __interrupt void RTI_ADC(void){
     ADC10CTL0 &= ~ENC;
-    
+
+    unsigned char k = 0;    
     soma = 0;
 
     for(k = 0; k < 32; k++) soma = soma + adc_buffer[k];
@@ -201,6 +197,7 @@ __interrupt void RTI_ADC(void){
 /*func apoio*/
 
 void analisa_apneia(void){
+    unsigned char k = 0;
     soma_janela = 0;
 
     for(k = 0; k < 50; k++) soma_janela += janela[k];
@@ -216,19 +213,13 @@ void analisa_apneia(void){
 
     variancia_janela = variancia_janela / 50;
 
-    log0 = 4;
-
     if(alarme_ativo) return;
-
-    log0 = 3;
 
     if(variancia_janela < 256){
         janelas_sem_movimento++;
-        log0 = 2;
+
         if(janelas_sem_movimento >= 2){
             alarme_ativo = 1;
-            //printf("entrou");
-            log0 = 1;
 
             P1OUT |= BIT6;
             P1OUT &= ~BIT0;
