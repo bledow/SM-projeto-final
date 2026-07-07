@@ -23,6 +23,7 @@ void ini_Timer1(void);
 void ini_ADC(void);
 void ini_uart(void);
 void enviar_tensao_uart(void);
+void uart_envia_string(char *str);
 
 void analisa_apneia(void);
 
@@ -59,8 +60,11 @@ int main(void)
     ini_ADC();
     ini_uart();
 
+    __enable_interrupt();
+
     while(1);
 }
+
 
 void ini_uCon(void)
 {
@@ -122,27 +126,22 @@ void ini_ADC(void){
     ADC10CTL0 |= ENC;
 }
 
-void ini_uart(void){
-
+void ini_uart(void)
+{
     UCA0CTL1 |= UCSWRST;
 
     UCA0CTL0 = 0;
-    UCA0CTL1 = UCSSEL1 + UCSWRST;
+    UCA0CTL1 = UCSSEL1 | UCSWRST;      // SMCLK
 
     UCA0BR0 = 104;
     UCA0BR1 = 0;
     UCA0MCTL = UCBRS0;
 
-
-    P1SEL  |= BIT2;
-    P1SEL2 |= BIT2;
+    P1SEL |= BIT1 + BIT2;
+    P1SEL2 |= BIT1 + BIT2;
 
     UCA0CTL1 &= ~UCSWRST;
-
-    IFG2 &= ~UCA0TXIFG;
-    IE2  |= UCA0TXIE;
 }
-
 /* RTI */
 
 #pragma  vector=PORT1_VECTOR
@@ -212,27 +211,12 @@ __interrupt void RTI_ADC(void){
     ADC10CTL0 |= ENC;
 }
 
-#pragma vector=USCIAB0TX_VECTOR
-__interrupt void USCI0TX_RTI(void){
-    IFG2 &= ~UCA0TXIFG;
-
-    if( TX_DATA[tx_index] == '\0' ){
-        tx_index = 0;
-    }else{
-        if(tx_index >= 32){
-            tx_index = 0;
-        }else{
-            UCA0TXBUF = TX_DATA[tx_index];
-            tx_index++;
-        }
-    }
-}
-
 /*func apoio*/
 
 void analisa_apneia(void){
     unsigned char k = 0;
     soma_janela = 0;
+
 
     for(k = 0; k < 50; k++) soma_janela += janela[k];
 
@@ -279,9 +263,16 @@ void enviar_tensao_uart(void){
     aux = (aux - (float)vin_dec_1) * 10.0;
     vin_dec_2 = (char)aux;
 
-    if(tx_index == 0)
+    sprintf((char*)TX_DATA,"Tensao = %d,%d%d V\r\n", vin_int, vin_dec_1, vin_dec_2);
+
+    uart_envia_string((char*)TX_DATA);
+}
+
+void uart_envia_string(char *str)
+{
+    while(*str != '\0')
     {
-        sprintf((char*)TX_DATA,"Tensao = %d,%d%d V\r\n", vin_int, vin_dec_1, vin_dec_2);
-        IFG2 |= UCA0TXIFG;
+        while(!(IFG2 & UCA0TXIFG));   // Espera buffer de TX livre
+        UCA0TXBUF = *str++;
     }
 }
