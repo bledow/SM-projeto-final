@@ -1,21 +1,6 @@
 #include <msp430.h>
 #include <stdio.h>
 
-/*
-* P1.4 --> A4 recebe a saída do LM358
-
-* Timer 0 gerando PWM de 5 Hz (200ms)
-* Então, para janela de 10s --> 50 médias
-
-* SMCLK = 1MHz
-* Rc = 50% (gatilho para o ADC)
-
-*  cálculo da média na RTI do ADC
-
-* 1 un. de ADC = 3,3V / 1023 = 3,23mV
-* 50mV / 3,23mV = 15,5 => limiar = 16
-*/
-
 void ini_uCon(void);
 void ini_P1_P2(void);
 void ini_Timer0(void);
@@ -42,10 +27,7 @@ volatile unsigned char alarme_ativo = 0;
 volatile unsigned long soma_janela = 0;
 volatile unsigned int media_janela = 0;
 volatile unsigned long variancia_janela = 0;
-volatile unsigned long diferenca = 0;
-
-volatile unsigned char log0 = 0;
-volatile unsigned char teste4_pronto = 0;
+volatile long diferenca = 0;
 
 volatile float tensao = 0.0;
 unsigned char TX_DATA[32];
@@ -59,9 +41,7 @@ int main(void)
     ini_Timer1();
     ini_ADC();
     ini_uart();
-
-    __enable_interrupt();
-
+    
     while(1);
 }
 
@@ -72,7 +52,7 @@ void ini_uCon(void)
 
     DCOCTL = CALDCO_8MHZ;
     BCSCTL1 = CALBC1_8MHZ;
-    BCSCTL2 = DIVS0 + DIVS1;   // SMCLK = 8 MHz / 8 = 1 MHz
+    BCSCTL2 = DIVS0 + DIVS1;
     BCSCTL3 = XCAP0 + XCAP1;
 
     while(BCSCTL3 & LFXT1OF);
@@ -82,13 +62,6 @@ void ini_uCon(void)
 
 void ini_P1_P2(void)
 {
-    /*
-     * P1.0 --> LED verde
-     * P1.6 --> LED vermelho
-     * P1.3 --> S2
-     * P1.4 --> A4
-     */
-
     P1DIR = BIT0 + BIT6;
     P1REN = BIT3;
     P1OUT = BIT3 + BIT0;
@@ -96,27 +69,23 @@ void ini_P1_P2(void)
     P1IES = BIT3;
     P1IFG = 0;
     P1IE = BIT3;
-
-    P2DIR = BIT1;
-    P2OUT = 0;
 }
 
 void ini_Timer0(void){
     TA0CTL = TASSEL1 + ID0 + ID1 + MC0;
     TA0CCTL1 = OUTMOD0 + OUTMOD1 + OUTMOD2;
-    TA0CCR0 = 24999; // 1M / 8 * 0,2 - 1
+    TA0CCR0 = 24999;
     TA0CCR1 = 12500;
 }
 
 void ini_Timer1(void){
-    //ini
     TA1CTL = TASSEL1 + TACLR;
     TA1CCR0 = 14999;
     TA1CCTL0 = CCIE;
 }
 
 void ini_ADC(void){
-    ADC10CTL0 = ADC10SHT0 + MSC + ADC10IE + ADC10ON; //freq tipica do LM358 300ohm
+    ADC10CTL0 = ADC10SHT0 + MSC + ADC10IE + ADC10ON;
     ADC10CTL1 = INCH2 + SHS0 + ADC10SSEL0 + ADC10SSEL1 + CONSEQ1;
     
     ADC10DTC1 = 32;
@@ -131,7 +100,7 @@ void ini_uart(void)
     UCA0CTL1 |= UCSWRST;
 
     UCA0CTL0 = 0;
-    UCA0CTL1 = UCSSEL1 | UCSWRST;      // SMCLK
+    UCA0CTL1 = UCSSEL1 | UCSWRST;
 
     UCA0BR0 = 104;
     UCA0BR1 = 0;
@@ -142,7 +111,6 @@ void ini_uart(void)
 
     UCA0CTL1 &= ~UCSWRST;
 }
-/* RTI */
 
 #pragma  vector=PORT1_VECTOR
 __interrupt void RTI_porta1(void){
@@ -159,7 +127,6 @@ __interrupt void RTI_M0_Timer1_deb(void){
     if((~P1IN) & BIT3){
         P1OUT &= ~BIT6;
         P1OUT |= BIT0;
-        // P2OUT &= ~BITx; // desligar buzzer
 
         TA1CTL |= TACLR;
 
@@ -211,8 +178,6 @@ __interrupt void RTI_ADC(void){
     ADC10CTL0 |= ENC;
 }
 
-/*func apoio*/
-
 void analisa_apneia(void){
     unsigned char k = 0;
     soma_janela = 0;
@@ -241,7 +206,6 @@ void analisa_apneia(void){
 
             P1OUT |= BIT6;
             P1OUT &= ~BIT0;
-            // P2OUT |= BITx; // ligar buzzer
         }
     } else {
         janelas_sem_movimento = 0;
@@ -272,7 +236,7 @@ void uart_envia_string(char *str)
 {
     while(*str != '\0')
     {
-        while(!(IFG2 & UCA0TXIFG));   // Espera buffer de TX livre
+        while(!(IFG2 & UCA0TXIFG)); 
         UCA0TXBUF = *str++;
     }
 }
